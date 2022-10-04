@@ -1,0 +1,22 @@
+version: '3.9'
+services:
+  express:
+    container_name: my-secret-venture-express
+    restart: unless-stopped
+    ports:
+      - '3003:3003'
+    volumes:
+      - ./express:/src
+      - /src/node_modules
+    build:
+      context: ./express/
+    command: npm run dev
+  dynamodb-local:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    image: "amazon/dynamodb-local:latest"
+    container_name: my-secret-venture-dynamodb-local
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./dynamodb-volume:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal

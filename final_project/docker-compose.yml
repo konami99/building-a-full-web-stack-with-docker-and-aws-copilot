@@ -1,0 +1,41 @@
+version: '3.9'
+services:
+  express:
+    container_name: my-secret-venture-express
+    restart: unless-stopped
+    ports:
+      - '3003:3003'
+    volumes:
+      - ./express:/src
+      - /src/node_modules
+    build:
+      context: ./express/
+    command: npm run dev
+  dynamodb-local:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    image: "amazon/dynamodb-local:latest"
+    container_name: my-secret-venture-dynamodb-local
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./dynamodb-volume:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+  localstack:
+    image: localstack/localstack:latest
+    container_name: my-secret-venture-localstack
+    environment: 
+      - AWS_DEFAULT_REGION=us-west-2
+      - EDGE_PORT=4566
+      - SERVICES=sns,sqs
+    ports:
+      - '4566-4597:4566-4597'
+  sqs_sns_setup:
+    image: amazon/aws-cli:latest
+    depends_on:
+      - localstack
+    restart: "no"
+    environment:
+      - AWS_DEFAULT_REGION=us-west-2
+    volumes:
+      - ~/.aws:/root/.aws
+    entrypoint: [ "bash", "-c", "sleep 10 && aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name emailEventsQueue && aws --endpoint-url=http://localstack:4566 sns create-topic --name emailEvents && aws --endpoint-url=http://localstack:4566 sns subscribe --topic-arn arn:aws:sns:us-west-2:000000000000:emailEvents --protocol sqs --notification-endpoint http://localstack:4566/000000000000/emailEventsQueue" ]
